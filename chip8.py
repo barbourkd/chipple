@@ -15,6 +15,25 @@ black = 0, 0, 0
 screen = pygame.display.set_mode(size)
 pixel = pygame.image.load("pixel.png")
 
+key_map = { 49 : 0x0,
+            50 : 0x1,
+            51 : 0x2,
+            52 : 0x3,
+            113 : 0x4,
+            119 : 0x5,
+            101 : 0x6,
+            114 : 0x7,
+            97 : 0x8,
+            115 : 0x9,
+            100 : 0xA,
+            102 : 0xB,
+            122 : 0xC,
+            120 : 0xD,
+            99 : 0xE,
+            118 : 0xF
+}
+
+'''
 key_map = { "1" : 0x0,
             "2" : 0x1,
             "3" : 0x2,
@@ -32,8 +51,9 @@ key_map = { "1" : 0x0,
             "c" : 0xE,
             "v" : 0xF
 }
+'''
 
-LOGGING = True
+LOGGING = False
 def log(msg):
   if LOGGING:
     print msg
@@ -219,10 +239,8 @@ class cpu:
     self.should_draw = True
 
   def _ENNN(self):
-    log("ENNN %X - PLACEHOLDER (incomplete)" % self.opcode)
+    #log("ENNN %X - PLACEHOLDER (incomplete)" % self.opcode)
     extracted_op = self.opcode & 0xf00f
-    log("EXTRACTED %X" % extracted_op)
-    log(hex(extracted_op))
     try:
       self.funcmap[extracted_op]()
     except:
@@ -232,12 +250,15 @@ class cpu:
     log("EX9E %X - Skips next instruction if the key in VX is pressed" % self.opcode)
     key = self.v[self.vx] & 0xf
     if self.inputs[key] == 1:
+      log("KEY PRESSED")
       self.pc += 2
 
+  ''' BROKEN '''
   def _EXA1(self):
-    leg("EXA1 %X - Skips next instruction if the key in VX isn't pressed" % self.opcode)
+    log("EXA1 %X - Skips next instruction if the key in VX isn't pressed" % self.opcode)
     key = self.v[self.vx] & 0xF
     if self.inputs[key] == 0:
+      log("KEY NOT PRESSED")
       self.pc += 2
 
   def _FNNN(self):
@@ -360,17 +381,20 @@ class cpu:
     if self.st > 0:
       self.st -= 1
 
-    time.sleep(0.01)
+    time.sleep(0.005)
 
-    self.inputs = [0] * 16
+    #self.inputs = [0] * 16
     events = pygame.event.get()
     for event in events:
       if event.type == pygame.KEYDOWN:
-        key = event.unicode
+        key = event.key
         if key in key_map:
           self.inputs[key_map[key]] = 1
           print self.inputs
-
+      if event.type == pygame.KEYUP:
+        key = event.key
+        if key in key_map:
+          self.inputs[key_map[key]] = 0
 
       '''
       if pygame.key.get_focused():
