@@ -10,48 +10,28 @@ pygame.init()
 size = width, height = 640, 320
 
 speed = [2, 2]
-black = 0, 0, 0
+black = 255, 170, 0
 
 screen = pygame.display.set_mode(size)
 pixel = pygame.image.load("pixel.png")
 
-key_map = { 49 : 0x0,
-            50 : 0x1,
-            51 : 0x2,
-            52 : 0x3,
+key_map = { 120 : 0x0,
+            49  : 0x1,
+            50  : 0x2,
+            51  : 0x3,
             113 : 0x4,
             119 : 0x5,
             101 : 0x6,
-            114 : 0x7,
-            97 : 0x8,
-            115 : 0x9,
-            100 : 0xA,
-            102 : 0xB,
-            122 : 0xC,
-            120 : 0xD,
-            99 : 0xE,
+            97  : 0x7,
+            115 : 0x8,
+            100 : 0x9,
+            120 : 0xA,
+            99  : 0xB,
+            52  : 0xC,
+            114 : 0xD,
+            102 : 0xE,
             118 : 0xF
-}
-
-'''
-key_map = { "1" : 0x0,
-            "2" : 0x1,
-            "3" : 0x2,
-            "4" : 0x3,
-            "q" : 0x4,
-            "w" : 0x5,
-            "e" : 0x6,
-            "r" : 0x7,
-            "a" : 0x8,
-            "s" : 0x9,
-            "d" : 0xA,
-            "f" : 0xB,
-            "z" : 0xC,
-            "x" : 0xD,
-            "c" : 0xE,
-            "v" : 0xF
-}
-'''
+            }
 
 LOGGING = False
 def log(msg):
@@ -101,8 +81,7 @@ class cpu:
     try:
       self.funcmap[extracted_op]()
     except:
-      #print "Unknown instruction %X" % self.opcode
-      pass
+     print "Unknown instruction %X" % self.opcode
 
   def _00E0(self):
     log("00E0 %X - clear screen" % self.opcode)
@@ -129,7 +108,7 @@ class cpu:
 
   def _4XNN(self):
     log("4XNN %X - Skips the next instruction if VX doesn't equal NN." % self.opcode)
-    if self.v[self.vx] != (self.opcode & 0x00ff):
+    if self.v[self.vx] != (self.opcode & 0xff):
       self.pc += 2
 
   def _5XY0(self):
@@ -143,56 +122,70 @@ class cpu:
 
   def _7XNN(self):
     log("7XNN %X - Adds NN to VX" % self.opcode)
-    self.v[self.vx] += self.opcode & 0x00ff
+    self.v[self.vx] += (self.opcode & 0x00ff)
+    self.v[self.vx] &= 0xff
 
   def _8NNN(self):
-    #log("8NNN %X - 8STUFF" % self.opcode)
     extracted_op = self.opcode & 0xf00f
     extracted_op += 0x0ff0
     try:
       self.funcmap[extracted_op]()
     except:
-      log("Unknown instruction 8NNN %X" % self.opcode)
+      print "Unknown instruction 8NNN %X" % self.opcode
 
   def _8XY0(self):
     log("8XY0 %X - Sets VX to the value of VY" % self.opcode)
     self.v[self.vx] = self.v[self.vy]
-    self.v[self.vx] &= 0xff
 
   def _8XY1(self):
     log("8XY1 %X - Sets VX to the value of VX or VY" % self.opcode)
     self.v[self.vx] |= self.v[self.vy]
-    self.v[self.vx] &= 0xff
 
   def _8XY2(self):
     log("8XY2 %X - Sets VX to the value of VX and VY" % self.opcode)
     self.v[self.vx] &= self.v[self.vy]
-    self.v[self.vx] &= 0xff
 
   def _8XY3(self):
     log("8XY3 %X - Sets VX to the value of VX xor VY" % self.opcode)
     self.v[self.vx] ^= self.v[self.vy]
-    self.v[self.vx] &= 0xff
 
   def _8XY4(self):
     log("8XY4 %X - Adds VY to VX." % self.opcode)
     if self.v[self.vx] + self.v[self.vy] > 0xff:
       self.v[0xf] = 1
-    else: self.v[0xf] = 0
+    else: 
+      self.v[0xf] = 0
     self.v[self.vx] += self.v[self.vy]
     self.v[self.vx] &= 0xff # ensure VX is 8-bit value (<= 0xff)
 
   def _8XY5(self):
-    log("8XY5 %X - INCOMPLETE" % self.opcode)
+    log("8XY5 %X - Subtracts VY from VX" % self.opcode)
+    if self.v[self.vy] > self.v[self.vx]:
+      self.v[0xf] = 0
+    else:
+      self.v[0xf] = 1
+    self.v[self.vx] -= self.v[self.vy]
+    self.v[self.vx] &= 0xff
 
   def _8XY6(self):
-    log("8XY6 %X - INCOMPLETE" % self.opcode)
+    log("8XY6 %X - Shift VX right by 1" % self.opcode)
+    self.v[0xf] = self.v[self.vx] & 0x0001
+    self.v[self.vx] = self.v[self.vx] >> 1
 
   def _8XY7(self):
-    log("8XY7 %X - INCOMPLETE" % self.opcode)
+    log("8XY7 %X - sets VX to VY - VX" % self.opcode)
+    if self.v[self.vx] > self.v[self.vy]:
+      self.v[0xf] = 0
+    else:
+      self.v[0xf] = 1
+    self.v[self.vx] = self.v[self.vy] - self.v[self.vx]
+    self.v[self.vx] &= 0xff
 
   def _8XYE(self):
-    log("8XYE %X - INCOMPLETE" % self.opcode)
+    log("8XYE %X - Shifts VX left by one" % self.opcode)
+    self.v[0xf] = (self.v[self.vx] & 0x00f0) >> 7 # how's this work?
+    self.v[self.vx] = self.v[self.vx] << 1
+    self.v[self.vx] &= 0xff
 
   def _9XY0(self):
     log("9XY0 %X - Skips the next instruction if VX doesn't equal VY" % self.opcode)
@@ -239,12 +232,11 @@ class cpu:
     self.should_draw = True
 
   def _ENNN(self):
-    #log("ENNN %X - PLACEHOLDER (incomplete)" % self.opcode)
     extracted_op = self.opcode & 0xf00f
     try:
       self.funcmap[extracted_op]()
     except:
-      log("%X E SHIT BROKE" % self.opcode)
+      print "%X E SHIT BROKE" % self.opcode
 
   def _EX9E(self):
     log("EX9E %X - Skips next instruction if the key in VX is pressed" % self.opcode)
@@ -253,12 +245,10 @@ class cpu:
       log("KEY PRESSED")
       self.pc += 2
 
-  ''' BROKEN '''
   def _EXA1(self):
     log("EXA1 %X - Skips next instruction if the key in VX isn't pressed" % self.opcode)
     key = self.v[self.vx] & 0xF
     if self.inputs[key] == 0:
-      log("KEY NOT PRESSED")
       self.pc += 2
 
   def _FNNN(self):
@@ -292,6 +282,11 @@ class cpu:
   def _FX1E(self):
     log("FX1E %X - adds VX to I" % self.opcode)
     self.index += self.v[self.vx]
+    if self.index > 0xfff:
+      self.v[0xf] = 1
+      self.index &= 0xfff
+    else:
+      self.v[0xf] = 0
 
   def _FX29(self):
     log("FX29 %X - Sets I to location of sprite for character in VX" % self.opcode)
@@ -300,7 +295,7 @@ class cpu:
   def _FX33(self):
     log("FX33 %X - Stores the BCD representation of VX something something something" % self.opcode)
     self.memory[self.index] = self.v[self.vx] / 100
-    self.memory[self.index+1] = self.v[self.vx] % 100
+    self.memory[self.index+1] = (self.v[self.vx] % 100) / 10
     self.memory[self.index+2] = self.v[self.vx] % 10
 
   def _FX55(self):
@@ -320,10 +315,8 @@ class cpu:
     binary = open(rom_path, "rb").read()
     for i in range(len(binary)):
       self.memory[i+0x200] = ord(binary[i])
-    #print self.memory
 
   def __init__(self, *args, **kwargs):
-    #super(cpu, self).__init__(*args, **kwargs)
     self.funcmap = {
       0x0000: self._0NNN,
       0x00E0: self._00E0,
@@ -354,20 +347,47 @@ class cpu:
       0xE00E: self._EX9E,
       0xE001: self._EXA1,
       0xF000: self._FNNN,
-      0xF00A: self._FX0A,
       0xF007: self._FX07,
-      0xF029: self._FX29,
+      0xF00A: self._FX0A,
+      0xF015: self._FX15,
+      0xF018: self._FX18,
       0xF01E: self._FX1E,
-      0xF055: self._FX55,
+      0xF029: self._FX29,
       0xF033: self._FX33,
+      0xF055: self._FX55,
       0xF065: self._FX65
     }
 
+  def stepper(self):
+    for event in pygame.event.get():
+      if event.type == pygame.KEYDOWN:
+        key = event.key
+        if key == 13:
+          i = int(raw_input("What register should we change? > "))
+          self.v[i] = int(raw_input("What should we change register %d to? > " % i))
+          print "step %X" % self.opcode
+          print "register", self.v
+          print "pc 0x%X" % self.pc
+          print "index %X" % self.index
+          print "---"
+          return True
+        if key == 32:
+          self.debug = False
+        if key == 275:
+          print "step %X" % self.opcode
+          print "register", self.v
+          print "pc 0x%X" % self.pc
+          print "index %X" % self.index
+          print "---"
+          return True
 
-
-  def cycle(self):
-    """ Main loop of emulation """
+  def tick(self):
     self.opcode = (self.memory[self.pc] << 8) | self.memory[self.pc + 1]
+
+    while self.debug:
+      if self.stepper():
+        break
+    """ Main loop of emulation """
 
     self.vx = (self.opcode & 0x0f00) >> 8
     self.vy = (self.opcode & 0x00f0) >> 4
@@ -381,7 +401,7 @@ class cpu:
     if self.st > 0:
       self.st -= 1
 
-    time.sleep(0.005)
+    #time.sleep(0.01)
 
     #self.inputs = [0] * 16
     events = pygame.event.get()
@@ -390,37 +410,25 @@ class cpu:
         key = event.key
         if key in key_map:
           self.inputs[key_map[key]] = 1
-          print self.inputs
+        if key == 32:
+          self.debug = True 
       if event.type == pygame.KEYUP:
         key = event.key
         if key in key_map:
           self.inputs[key_map[key]] = 0
 
-      '''
-      if pygame.key.get_focused():
-        press = pygame.key.get_pressed()
-        for i in xrange(0, len(press)):
-          if press[i] == 1:
-            name = pygame.key.name(i)
-            self.inputs[key_map[name]] = 1
-            print self.inputs
-      '''
-
     try:
       self.funcmap[extracted_op]()
     except:
-      if self.opcode > 0:
-        print "Unknown instructon: %X - %X" % (self.opcode, extracted_op)
+      print "Unknown instructon: %X - %X" % (self.opcode, extracted_op)
 
 
   def clear(self):
     screen.fill(black)
-    #pygame.display.flip()
-    #self.display = [0] * 64 * 32
     self.should_draw = True
 
   def initialize(self):
-    self.clear()
+    #self.clear()
     self.memory = [0] * 4096
     self.v = [0] * 16
     self.display = [0] * 64 * 32
@@ -435,48 +443,35 @@ class cpu:
 
     self.pc = 0x200
 
+    self.debug = False
+
     for i in range(80):
       self.memory[i] = self.fonts[i]
 
   def draw(self):
     if self.should_draw:
-      self.clear()
+      screen.fill(black)
+      #self.clear()
       line_counter = 0
       for i in range(len(self.display)):
         if self.display[i] == 1:
           x = (i % 64) * 10
           y = (i / 64) * 10
-          #screen.blit(pixel, ((i/64)*10, 310 - ((i%64) * 10)))
-          #screen.blit(pixel, (i/64 * 10, i % 310 - 64 * 10))
           screen.blit(pixel, (x, y))
       pygame.display.flip()
       self.should_draw = False
 
   def get_key(self):
     for i in range(len(self.inputs)):
-      if inputs[i] == 1:
+      if self.inputs[i] == 1:
         return i
 
   def main(self):
     self.initialize()
-    log(self.pc)
     self.load_rom(sys.argv[1])
-    #while not self.has_exit:
     while True:
-      #self.dispatch_events()
-      self.cycle()
+      self.tick()
       self.draw()
-
-
-  def test(self):
-    self.opcode = (self.memory[0+0x200] << 8) | self.memory[0x200+1]
-    print self.opcode
-    print "0x%X" % self.opcode
-    #self.opcode = self.opcode & 0xf000
-    #print "0x%X".zfill(2) % self.opcode
 
 emu = cpu()
 emu.main()
-log("main done")
-#emu.test()
-#log("test done")
