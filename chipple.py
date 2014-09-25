@@ -34,6 +34,8 @@ key_map = { 120 : 0x0,
             }
 
 LOGGING = False
+DEBUG = False
+
 def log(msg):
   if LOGGING:
     print msg
@@ -443,7 +445,7 @@ class cpu:
 
     self.pc = 0x200
 
-    self.debug = False
+    #self.debug = False
 
     for i in range(80):
       self.memory[i] = self.fonts[i]
@@ -466,12 +468,25 @@ class cpu:
       if self.inputs[i] == 1:
         return i
 
-  def main(self):
+  def main(self, debug):
+    self.debug = debug
     self.initialize()
     self.load_rom(sys.argv[1])
     while True:
       self.tick()
       self.draw()
 
+if len(sys.argv) < 2:
+  print "Usage: python chipple.py <path to game>"
+  exit()
+
+if len(sys.argv) > 2:
+  if sys.argv[2] == "debug":
+    DEBUG = True
+    print "debug"
+  if sys.argv[2] == "log":
+    LOGGING = True
+
 emu = cpu()
-emu.main()
+
+emu.main(DEBUG)
